@@ -1,9 +1,8 @@
-
 import React from 'react';
 import { UserResult, GiftScore } from '../types';
 
 interface ResultsDisplayProps {
-  result: UserResult;
+  result: UserResult; // Now includes optional saveError
   onReset: () => void;
 }
 
@@ -41,6 +40,17 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ result, onReset }) => {
           Hola <span className="font-semibold text-sky-600">{result.name}</span>, estos son tus dones espirituales más destacados:
         </p>
       </div>
+
+      {result.saveError && (
+        <div className="mb-6 p-4 bg-red-50 border border-red-300 rounded-md text-center">
+          <p className="text-red-700 font-semibold">
+            <i className="fas fa-exclamation-triangle mr-2"></i>
+            Error al Guardar:
+          </p>
+          <p className="text-red-600 text-sm">{result.saveError}</p>
+          <p className="text-red-600 text-sm mt-1">Tus resultados se muestran localmente.</p>
+        </div>
+      )}
 
       <div className="grid md:grid-cols-1 lg:grid-cols-3 gap-8 mb-10">
         {result.topGifts.map((gs, index) => (

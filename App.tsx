@@ -4,13 +4,16 @@ import { ALL_QUESTIONS, GIFTS_DEFINITIONS, QUESTIONS_PER_PAGE } from './constant
 import WelcomeScreen from './components/WelcomeScreen';
 import QuestionnaireForm from './components/QuestionnaireForm';
 import ResultsDisplay from './components/ResultsDisplay';
+import { db } from './firebaseConfig'; // Import Firestore instance
+import { collection, addDoc, serverTimestamp } from "firebase/firestore"; 
 
 const App: React.FC = () => {
-  const [currentStep, setCurrentStep] = useState<AppStep>(AppStep.Welcome); // Start at Welcome
+  const [currentStep, setCurrentStep] = useState<AppStep>(AppStep.Welcome);
   const [userName, setUserName] = useState<string>('');
   const [answers, setAnswers] = useState<UserAnswers>({});
   const [results, setResults] = useState<UserResult | null>(null);
-  const [currentPageIndex, setCurrentPageIndex] = useState<number>(0); 
+  const [currentPageIndex, setCurrentPageIndex] = useState<number>(0);
+  const [saveError, setSaveError] = useState<string | undefined>(undefined);
 
   const totalPages = useMemo(() => Math.ceil(ALL_QUESTIONS.length / QUESTIONS_PER_PAGE), []);
 
@@ -36,11 +39,10 @@ const App: React.FC = () => {
   }, [answers]);
 
   const areCurrentPageQuestionsAnswered = useMemo(() => {
-    if (currentStep !== AppStep.Form) return false; // Only relevant for form step
+    if (currentStep !== AppStep.Form) return false;
     return currentQuestions.every(q => answers[q.id] !== undefined);
   }, [currentQuestions, answers, currentStep]);
   
-  // This is for enabling Next/Submit buttons within QuestionnaireForm
   const canProceedOnCurrentPage = useMemo(() => {
       return areCurrentPageQuestionsAnswered;
   }, [areCurrentPageQuestionsAnswered]);
@@ -50,8 +52,9 @@ const App: React.FC = () => {
       alert('Por favor, ingrese su nombre para comenzar.');
       return;
     }
+    setSaveError(undefined); // Clear any previous save errors
     setCurrentStep(AppStep.Form);
-    setCurrentPageIndex(0); // Ensure questionnaire starts from the first page
+    setCurrentPageIndex(0); 
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [userName]);
 
@@ -82,34 +85,65 @@ const App: React.FC = () => {
     }
   }, [currentPageIndex]);
 
-  const handleSubmit = useCallback(() => {
+  const saveResultsToFirestore = async (resultToSave: Omit<UserResult, 'id' | 'createdAt'> & { createdAt: any }) => {
+    try {
+      const docRef = await addDoc(collection(db, "spiritualGiftResults"), {
+        ...resultToSave,
+        createdAt: serverTimestamp() // Use server timestamp for consistency
+      });
+      console.log("Document written with ID: ", docRef.id);
+      // Optionally, update local result with Firestore ID if needed for future operations
+      // setResults(prev => prev ? ({ ...prev, id: docRef.id }) : null);
+    } catch (e) {
+      console.error("Error adding document: ", e);
+      setSaveError("Hubo un problema al guardar tus resultados en la base de datos. Aún puedes verlos localmente.");
+      // The error will be displayed on the Results page.
+      // We still proceed to show local results.
+      throw e; // Re-throw to be caught by handleSubmit if specific post-save-failure logic is needed there.
+    }
+  };
+
+  const handleSubmit = useCallback(async () => {
     if (!allQuestionsAnsweredGlobally) {
-      // This is a fallback, main validation is per-page.
       alert('Parece que faltan respuestas en algunas páginas. Por favor, revise.');
-      // Optionally, find the first unanswered page and navigate there.
-      // For now, simple alert.
       return;
     }
-     if (!canProceedOnCurrentPage) { // Ensures last page is complete
+    if (!canProceedOnCurrentPage) {
       alert('Por favor, responda todas las preguntas de esta página para ver sus dones.');
       return;
     }
 
     setCurrentStep(AppStep.Calculating);
+    // Brief delay for calculating UI, then move to saving
+    // No artificial delay, calculation is fast.
+    
+    const allScores = calculateScores();
+    const sortedScores = [...allScores].sort((a, b) => b.score - a.score);
+    const topGifts = sortedScores.slice(0, 3);
 
-    setTimeout(() => {
-      const allScores = calculateScores();
-      const sortedScores = [...allScores].sort((a, b) => b.score - a.score);
-      const topGifts = sortedScores.slice(0, 3);
+    const preliminaryResult: UserResult = {
+      name: userName,
+      topGifts: topGifts,
+      allScores: allScores,
+      createdAt: new Date() // Local date as fallback, Firestore will use serverTimestamp
+    };
+    
+    setResults(preliminaryResult); // Set local results first
+    setCurrentStep(AppStep.Saving); // Transition to saving step
+    setSaveError(undefined); // Clear previous errors
 
-      setResults({
-        name: userName, // userName is already set from WelcomeScreen
-        topGifts: topGifts,
-        allScores: allScores 
-      });
-      setCurrentStep(AppStep.Results);
+    try {
+      // Prepare data for Firestore (omit 'id' and 'saveError' if they were part of UserResult)
+      const { id, saveError: localSaveError, ...dataToSave } = preliminaryResult;
+      await saveResultsToFirestore(dataToSave);
+    } catch (error) {
+      // Error is handled within saveResultsToFirestore by setting saveError state
+      // and logged to console.
+    } finally {
+      setCurrentStep(AppStep.Results); // Always go to results page
       window.scrollTo({ top: 0, behavior: 'smooth' });
-    }, 1000);
+    }
+
   }, [allQuestionsAnsweredGlobally, calculateScores, userName, canProceedOnCurrentPage]);
 
   const handleReset = useCallback(() => {
@@ -117,7 +151,8 @@ const App: React.FC = () => {
     setAnswers({});
     setResults(null);
     setCurrentPageIndex(0);
-    setCurrentStep(AppStep.Welcome); // Reset to Welcome screen
+    setSaveError(undefined);
+    setCurrentStep(AppStep.Welcome);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
 
@@ -145,22 +180,28 @@ const App: React.FC = () => {
             onSubmit={handleSubmit}
             onNextPage={handleNextPage}
             onPrevPage={handlePrevPage}
-            // isSubmitting is false because form is hidden during actual calculation step
             isFormDisabled={false} 
             canProceed={canProceedOnCurrentPage}
             currentPageIndex={currentPageIndex}
             totalPages={totalPages}
           />
         )}
-        {currentStep === AppStep.Calculating && (
+        {currentStep === AppStep.Calculating && ( // This step might be very brief now
           <div className="flex flex-col items-center justify-center h-64 bg-white shadow-xl rounded-lg p-8">
             <i className="fas fa-cog fa-spin text-5xl text-sky-600 mb-6" aria-hidden="true"></i>
             <p className="text-2xl font-semibold text-sky-700">Calculando tus resultados...</p>
-            <p className="text-gray-600">Por favor espera un momento.</p>
+            <p className="text-gray-600">Un momento por favor.</p>
+          </div>
+        )}
+        {currentStep === AppStep.Saving && (
+          <div className="flex flex-col items-center justify-center h-64 bg-white shadow-xl rounded-lg p-8">
+            <i className="fas fa-cloud-upload-alt fa-spin text-5xl text-sky-600 mb-6" aria-hidden="true"></i>
+            <p className="text-2xl font-semibold text-sky-700">Guardando tus resultados...</p>
+            <p className="text-gray-600">Esto tomará un momento.</p>
           </div>
         )}
         {currentStep === AppStep.Results && results && (
-          <ResultsDisplay result={results} onReset={handleReset} />
+          <ResultsDisplay result={{...results, saveError: saveError}} onReset={handleReset} />
         )}
       </main>
       <footer className="text-center py-8 mt-12 border-t border-gray-300">

@@ -25,14 +25,18 @@ export interface GiftScore {
 }
 
 export interface UserResult {
+  id?: string; // Optional: ID from Firestore
   name: string;
   topGifts: GiftScore[];
   allScores: GiftScore[];
+  createdAt: Date | any; // Date for local, Firebase ServerTimestamp for Firestore
+  saveError?: string; // To store any error message during saving
 }
 
 export enum AppStep {
-  Welcome, // New step for initial screen
+  Welcome,
   Form,
   Calculating,
+  Saving, // New step for saving to Firestore
   Results,
 }
