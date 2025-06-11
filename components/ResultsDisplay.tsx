@@ -1,9 +1,11 @@
+
 import React from 'react';
 import { UserResult, GiftScore } from '../types';
 
 interface ResultsDisplayProps {
-  result: UserResult; // Now includes optional saveError
+  result: UserResult;
   onReset: () => void;
+  onNavigateToDevelopmentGuide: () => void; // New prop
 }
 
 const GiftCard: React.FC<{ giftScore: GiftScore, rank: number }> = ({ giftScore, rank }) => {
@@ -29,7 +31,7 @@ const GiftCard: React.FC<{ giftScore: GiftScore, rank: number }> = ({ giftScore,
 };
 
 
-const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ result, onReset }) => {
+const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ result, onReset, onNavigateToDevelopmentGuide }) => {
   return (
     <div className="space-y-8 py-8">
       <div className="text-center mb-10">
@@ -45,10 +47,10 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ result, onReset }) => {
         <div className="mb-6 p-4 bg-red-50 border border-red-300 rounded-md text-center">
           <p className="text-red-700 font-semibold">
             <i className="fas fa-exclamation-triangle mr-2"></i>
-            Error al Guardar:
+            Error al Guardar Resultados del Cuestionario:
           </p>
           <p className="text-red-600 text-sm">{result.saveError}</p>
-          <p className="text-red-600 text-sm mt-1">Tus resultados se muestran localmente.</p>
+          <p className="text-red-600 text-sm mt-1">Tus resultados del cuestionario se muestran localmente.</p>
         </div>
       )}
 
@@ -72,17 +74,26 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ result, onReset }) => {
         </div>
       )}
 
-
-      <div className="mt-12 text-center">
+      <div className="mt-12 text-center space-y-4 sm:space-y-0 sm:space-x-4">
         <button
           onClick={onReset}
-          className="bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 px-10 rounded-lg shadow-lg transition duration-150 ease-in-out text-xl focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-opacity-50"
+          className="bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 px-6 sm:px-10 rounded-lg shadow-lg transition duration-150 ease-in-out text-lg sm:text-xl focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-opacity-50"
         >
           <i className="fas fa-redo-alt mr-2"></i> Realizar de Nuevo
+        </button>
+        <button
+          onClick={onNavigateToDevelopmentGuide}
+          className="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 sm:px-10 rounded-lg shadow-lg transition duration-150 ease-in-out text-lg sm:text-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50"
+          aria-label="Crear o ver plan de desarrollo ministerial"
+        >
+          <i className="fas fa-seedling mr-2"></i> Crear/Ver Plan de Desarrollo Ministerial 
         </button>
       </div>
        <p className="text-center text-xs text-gray-500 mt-4">
         Marque las tres puntuaciones más altas; esto le ayudará a discernir su área de servicio espiritual para Dios y su iglesia.
+      </p>
+       <p className="text-center text-sm text-gray-600 mt-6">
+        El Plan de Desarrollo Ministerial te ayudará a reflexionar sobre cómo puedes usar tus dones en servicio.
       </p>
     </div>
   );

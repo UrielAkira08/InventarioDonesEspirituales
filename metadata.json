@@ -1,5 +1,6 @@
 {
   "name": "Cuestionario de Dones Espirituales",
   "description": "Una aplicación para ayudar a los usuarios a descubrir sus dones espirituales basados en un cuestionario. Los usuarios pueden responder una serie de preguntas, y la aplicación calculará y mostrará sus dones espirituales más prominentes junto con sus descripciones.",
-  "requestFramePermissions": []
+  "requestFramePermissions": [],
+  "prompt": ""
 }
