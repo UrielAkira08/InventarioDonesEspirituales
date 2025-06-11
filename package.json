@@ -11,8 +11,6 @@
   "dependencies": {
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
-    "firebase/app": "latest",
-    "firebase/firestore": "latest",
     "path": "^0.12.7",
     "vite": "^6.3.5",
     "url": "^0.11.4",
