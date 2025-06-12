@@ -15,11 +15,6 @@ import { collection, addDoc, serverTimestamp, doc, getDoc, setDoc, query, where,
 const sanitizeFirestoreId = (id: string): string => {
   if (!id) return `default_id_${Date.now()}`; 
 
-  // Replace problematic characters for Firestore IDs. Emails are common, so @ and . are handled.
-  // Replacing . with _ might be too aggressive if email itself is fine as ID.
-  // Firestore allows emails as doc IDs. Let's be less aggressive.
-  // Common problematic chars for path segments: /, #, $, [, ]
-  // Also, an ID cannot be "." or "..".
   let sanitizedId = id.replace(/[\/\#\$\[\]]/g, '_'); 
   
   if (sanitizedId.trim() === '') {
@@ -30,7 +25,6 @@ const sanitizeFirestoreId = (id: string): string => {
     sanitizedId = `id_${sanitizedId.replace(/\./g, '_')}`;
   }
 
-  // Max length 1,500 bytes. Truncate (char length approximation).
   if (sanitizedId.length > 500) {
     sanitizedId = sanitizedId.substring(0, 500);
   }
@@ -91,19 +85,18 @@ const App: React.FC = () => {
   const handleNavigateToDevelopmentIdentification = useCallback(() => {
     setCurrentStep(AppStep.IdentifyForDevelopment);
     setGeneralLoadingError(null);
-    setPlanLoadingError(null); // Clear previous errors
+    setPlanLoadingError(null); 
   }, []);
   
   const handleBackToWelcome = useCallback(() => {
     setCurrentStep(AppStep.Welcome);
-    // Optionally reset name/email here if needed, or keep them for convenience
   }, []);
 
   const handleProceedToQuiz = useCallback((name: string, email: string) => {
     setUserName(name);
     setUserEmail(email);
     setSaveError(undefined);
-    setAnswers({}); // Reset answers for a new quiz
+    setAnswers({}); 
     setResults(null);
     setCurrentPageIndex(0); 
     setCurrentStep(AppStep.Form);
@@ -140,7 +133,7 @@ const App: React.FC = () => {
   const saveResultsToFirestore = async (resultToSave: Omit<UserResult, 'id' | 'createdAt'> & { createdAt: any }) => {
     try {
       const docRef = await addDoc(collection(db, "spiritualGiftResults"), {
-        ...resultToSave, // Should include name and userEmail
+        ...resultToSave, 
         createdAt: serverTimestamp() 
       });
       console.log("Result document written with ID: ", docRef.id);
@@ -169,7 +162,7 @@ const App: React.FC = () => {
 
     const preliminaryResult: UserResult = {
       name: userName,
-      userEmail: userEmail, // Include email
+      userEmail: userEmail, 
       topGifts: topGifts,
       allScores: allScores,
       createdAt: new Date() 
@@ -180,7 +173,6 @@ const App: React.FC = () => {
     setSaveError(undefined);
 
     try {
-      // 'id' and 'saveError' are not part of the data to save to Firestore initially
       const { id, saveError: localSaveError, ...dataToSave } = preliminaryResult; 
       await saveResultsToFirestore(dataToSave as Omit<UserResult, 'id' | 'createdAt' | 'saveError'> & { createdAt: any });
     } catch (error) {
@@ -210,19 +202,22 @@ const App: React.FC = () => {
   const loadDevelopmentPlanByEmail = useCallback(async (emailForPlan: string) => {
     setIsPlanLoading(true);
     setPlanLoadingError(null);
-    setUserEmail(emailForPlan); // Ensure userEmail state is set
+    setUserEmail(emailForPlan); 
 
-    // Step 1: Load latest spiritual gift results for this email
+    let loadedUserResult: UserResult | null = null;
+    let planDocId = sanitizeFirestoreId(emailForPlan);
+
     try {
+      // Step 1: Load latest spiritual gift results for this email
       const resultsQuery = query(
         collection(db, "spiritualGiftResults"),
         where("userEmail", "==", emailForPlan),
         orderBy("createdAt", "desc"),
         limit(1)
       );
+      console.log(`Querying results for email: ${emailForPlan}`);
       const querySnapshot = await getDocs(resultsQuery);
 
-      let loadedUserResult: UserResult | null = null;
       if (!querySnapshot.empty) {
         const resultDoc = querySnapshot.docs[0];
         const resultData = resultDoc.data();
@@ -235,16 +230,18 @@ const App: React.FC = () => {
             createdAt: (resultData.createdAt as Timestamp)?.toDate ? (resultData.createdAt as Timestamp).toDate() : new Date(),
         };
         setResults(loadedUserResult);
-        setUserName(loadedUserResult.name); // Update userName state from loaded result
+        setUserName(loadedUserResult.name); 
+        console.log(`Results loaded for ${emailForPlan}:`, loadedUserResult);
       } else {
         setPlanLoadingError("No se encontraron resultados del cuestionario para este correo. Por favor, complete el cuestionario primero.");
         setIsPlanLoading(false);
-        setDevelopmentPlan(null); // Ensure no old plan is shown
+        setDevelopmentPlan(null); 
+        console.warn(`No results found for email: ${emailForPlan}`);
         return;
       }
 
       // Step 2: Load development plan using the email
-      const planDocId = sanitizeFirestoreId(emailForPlan);
+      console.log(`Loading development plan with doc ID: ${planDocId} (from email: ${emailForPlan})`);
       const planDocRef = doc(db, "developmentPlans", planDocId);
       const planDocSnap = await getDoc(planDocRef);
 
@@ -260,17 +257,18 @@ const App: React.FC = () => {
           step1_primaryGifts: loadedPlan.step1_primaryGifts || currentTopGiftsText
         };
         setDevelopmentPlan(completePlan);
+        console.log(`Development plan loaded for ${planDocId}:`, completePlan);
       } else {
-        // No existing plan, set up an initial one based on loaded results
         setDevelopmentPlan({
           ...initialDevelopmentPlanData,
           step1_primaryGifts: currentTopGiftsText,
         });
+        console.log(`No existing development plan for ${planDocId}, initialized a new one.`);
       }
       setCurrentStep(AppStep.DevelopmentGuide);
 
     } catch (error) {
-      console.error(`Error loading data for email: '${emailForPlan}'. Firestore error:`, error);
+      console.error(`Error loading data for email: '${emailForPlan}', Plan Doc ID: '${planDocId}'. Firestore error:`, error);
       setPlanLoadingError("Error al cargar los datos. Intente de nuevo.");
       setDevelopmentPlan(null); 
     } finally {
@@ -278,26 +276,29 @@ const App: React.FC = () => {
     }
   }, []);
   
-  // This is called from Results screen, or if already in dev guide and results/email are known
   const loadOrCreateDevelopmentPlan = useCallback(async () => {
     if (!userEmail) {
       setPlanLoadingError("Correo electrónico del usuario no disponible. No se puede cargar el plan.");
       setDevelopmentPlan(initialDevelopmentPlanData);
-      setCurrentStep(AppStep.IdentifyForDevelopment); // Guide user to provide email
+      setCurrentStep(AppStep.IdentifyForDevelopment); 
+      console.error("loadOrCreateDevelopmentPlan: userEmail is missing.");
       return;
     }
-    if (!results || !results.name) { // Ensure results (and thus name) are loaded
-        // This case should ideally be handled by loadDevelopmentPlanByEmail if coming directly
+    if (!results || !results.name) { 
       setPlanLoadingError("Resultados del cuestionario no disponibles. No se puede cargar/crear el plan.");
       setDevelopmentPlan(initialDevelopmentPlanData);
+      console.error("loadOrCreateDevelopmentPlan: results or results.name is missing.", results);
+      // It might be better to navigate to a state where results can be acquired if this happens.
+      // For now, it shows an error if called inappropriately.
       return;
     }
 
     setIsPlanLoading(true);
     setPlanLoadingError(null);
-    const planDocId = sanitizeFirestoreId(userEmail); // Use email for plan ID
+    const planDocId = sanitizeFirestoreId(userEmail); 
 
     try {
+      console.log(`Loading or creating development plan with doc ID: ${planDocId} (from email: ${userEmail})`);
       const planDocRef = doc(db, "developmentPlans", planDocId);
       const planDocSnap = await getDoc(planDocRef);
       const currentTopGiftsText = (results.topGifts && Array.isArray(results.topGifts))
@@ -312,12 +313,13 @@ const App: React.FC = () => {
           step1_primaryGifts: loadedPlan.step1_primaryGifts || currentTopGiftsText
         };
         setDevelopmentPlan(completePlan);
+        console.log(`Development plan loaded for ${planDocId}:`, completePlan);
       } else {
-        // Create initial plan data if none exists
         setDevelopmentPlan({
           ...initialDevelopmentPlanData,
           step1_primaryGifts: currentTopGiftsText,
         });
+        console.log(`No existing development plan for ${planDocId}, initialized a new one based on current results.`);
       }
     } catch (error) {
       console.error(`Error loading development plan for email: '${userEmail}', sanitized ID: '${planDocId}'. Firestore error:`, error);
@@ -337,18 +339,18 @@ const App: React.FC = () => {
 
   const handleNavigateToDevelopmentGuide = useCallback(() => {
     if (!userEmail || !results) {
-        // This should not happen if called from results page, but as a safeguard
         setCurrentStep(AppStep.IdentifyForDevelopment); 
         setGeneralLoadingError("Por favor, ingrese su correo para cargar su plan.");
+        console.warn("handleNavigateToDevelopmentGuide: Missing userEmail or results. Redirecting to IdentifyForDevelopment.");
         return;
     }
     setCurrentStep(AppStep.DevelopmentGuide);
     loadOrCreateDevelopmentPlan();
   }, [userEmail, results, loadOrCreateDevelopmentPlan]);
   
-  // If navigating directly to Dev Guide and data is already set up (e.g. after identify)
    useEffect(() => {
     if (currentStep === AppStep.DevelopmentGuide && userEmail && results && !developmentPlan && !isPlanLoading) {
+        console.log("useEffect triggered: Navigating to DevelopmentGuide, attempting to loadOrCreateDevelopmentPlan.");
         loadOrCreateDevelopmentPlan();
     }
   }, [currentStep, userEmail, results, developmentPlan, isPlanLoading, loadOrCreateDevelopmentPlan]);
@@ -373,15 +375,18 @@ const App: React.FC = () => {
   const saveDevelopmentPlan = useCallback(async () => {
     if (!developmentPlan || !userEmail) {
       setPlanSavingError("No hay datos del plan para guardar o falta el correo electrónico del usuario.");
+      console.error("saveDevelopmentPlan: Missing developmentPlan or userEmail.", {developmentPlan, userEmail});
       return;
     }
     setIsPlanSaving(true);
     setPlanSavingError(null);
-    const planDocId = sanitizeFirestoreId(userEmail); // Use email for plan ID
+    const planDocId = sanitizeFirestoreId(userEmail); 
     try {
+      console.log(`Saving development plan with doc ID: ${planDocId} (from email: ${userEmail})`);
       const planDocRef = doc(db, "developmentPlans", planDocId);
       await setDoc(planDocRef, { ...developmentPlan, userEmail: userEmail, userName: userName, lastUpdated: serverTimestamp() }, { merge: true });
-      // Optionally show a success message
+      console.log(`Development plan saved successfully for ${planDocId}.`);
+      // Optionally show a success message to the user, e.g. using a temporary state variable
     } catch (error) {
       console.error(`Error saving development plan for email: '${userEmail}', sanitized ID: '${planDocId}'. Firestore error:`, error);
       setPlanSavingError("Error al guardar el plan de desarrollo. Intente de nuevo.");
@@ -391,13 +396,12 @@ const App: React.FC = () => {
   }, [developmentPlan, userEmail, userName]);
 
   const handleNavigateToResults = useCallback(() => {
-    if (results) { // Ensure results exist before navigating
+    if (results) { 
         setCurrentStep(AppStep.Results);
     } else {
-        // If no results, perhaps user came via "Develop Gifts" and bailed, or reset.
-        // Go to a safe place, like Welcome or IdentifyForQuiz
         setCurrentStep(AppStep.IdentifyForQuiz); 
         setGeneralLoadingError("No hay resultados para mostrar. Por favor, complete el cuestionario.");
+        console.warn("handleNavigateToResults: No results found, navigating to IdentifyForQuiz.");
     }
   }, [results]);
 
@@ -469,18 +473,18 @@ const App: React.FC = () => {
         {currentStep === AppStep.Results && results && (
           <ResultsDisplay 
             result={{...results, saveError: saveError}} 
-            onReset={handleReset}
+            onReset={handleReset} // This leads back to Welcome
             onNavigateToDevelopmentGuide={handleNavigateToDevelopmentGuide}
           />
         )}
          {currentStep === AppStep.DevelopmentGuide && results && developmentPlan && (
           <SpiritualGiftsDevelopmentGuide
-            userName={results.name} // This name comes from loaded results
+            userName={results.name} 
             topGifts={results.topGifts}
             planData={developmentPlan}
             onPlanChange={handleDevelopmentPlanChange}
             onSavePlan={saveDevelopmentPlan}
-            onReset={handleReset} 
+            onReset={handleReset} // This leads back to Welcome
             onNavigateToResults={handleNavigateToResults} 
             isLoading={isPlanLoading}
             isSaving={isPlanSaving}
@@ -488,17 +492,26 @@ const App: React.FC = () => {
             saveError={planSavingError}
           />
         )}
-        {/* Fallback for Dev Guide if results/plan somehow not loaded but step is DevGuide */}
         {currentStep === AppStep.DevelopmentGuide && (!results || !developmentPlan) && !isPlanLoading && ( 
             <div className="bg-yellow-50 border border-yellow-300 text-yellow-700 px-4 py-3 rounded-md shadow-lg text-center">
                 <strong className="font-bold">Información:</strong>
                 <span className="block sm:inline"> {planLoadingError || "No se pudo cargar el plan de desarrollo. Por favor, intente acceder nuevamente o complete el cuestionario."}</span>
-                <button 
-                onClick={handleReset} 
-                className="mt-4 bg-sky-600 hover:bg-sky-700 text-white font-bold py-2 px-4 rounded-lg shadow-md"
-                >
-                Ir al Inicio
-                </button>
+                 <div className="mt-4 space-x-2">
+                    <button 
+                        onClick={handleBackToWelcome} 
+                        className="bg-sky-600 hover:bg-sky-700 text-white font-bold py-2 px-4 rounded-lg shadow-md"
+                    >
+                        Ir al Inicio
+                    </button>
+                    {results && ( // Only show "Volver a Resultados" if results are available
+                         <button 
+                            onClick={handleNavigateToResults} 
+                            className="bg-teal-500 hover:bg-teal-600 text-white font-bold py-2 px-4 rounded-lg shadow-md"
+                         >
+                            Volver a Resultados
+                         </button>
+                    )}
+                 </div>
             </div>
         )}
       </main>

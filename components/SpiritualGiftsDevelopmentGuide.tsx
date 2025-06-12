@@ -8,7 +8,7 @@ interface SpiritualGiftsDevelopmentGuideProps {
   planData: DevelopmentPlanData;
   onPlanChange: (fieldName: keyof DevelopmentPlanData, value: any) => void;
   onSavePlan: () => void;
-  onReset: () => void;
+  onReset: () => void; // Navigates to Welcome/Home
   onNavigateToResults: () => void;
   isLoading: boolean;
   isSaving: boolean;
@@ -88,13 +88,21 @@ const SpiritualGiftsDevelopmentGuide: React.FC<SpiritualGiftsDevelopmentGuidePro
     return (
       <div className="bg-red-50 border border-red-300 text-red-700 px-4 py-3 rounded-md shadow-lg text-center">
         <strong className="font-bold">Error al Cargar:</strong>
-        <span className="block sm:inline"> {loadError}</span>
-        <button 
-          onClick={onNavigateToResults} 
-          className="mt-4 bg-sky-600 hover:bg-sky-700 text-white font-bold py-2 px-4 rounded-lg shadow-md"
-        >
-          Volver a Resultados
-        </button>
+        <span className="block sm:inline mb-3"> {loadError}</span>
+        <div className="mt-4 space-x-2 flex flex-col sm:flex-row sm:justify-center gap-2">
+            <button 
+            onClick={onReset} 
+            className="bg-slate-500 hover:bg-slate-600 text-white font-bold py-2 px-4 rounded-lg shadow-md"
+            >
+            <i className="fas fa-home mr-2"></i> Volver al Inicio
+            </button>
+            <button 
+            onClick={onNavigateToResults} 
+            className="bg-sky-600 hover:bg-sky-700 text-white font-bold py-2 px-4 rounded-lg shadow-md"
+            >
+            <i className="fas fa-arrow-left mr-2"></i> Volver a Resultados
+            </button>
+        </div>
       </div>
     );
   }
@@ -228,9 +236,9 @@ const SpiritualGiftsDevelopmentGuide: React.FC<SpiritualGiftsDevelopmentGuidePro
           <button
             onClick={onReset}
             className="w-full sm:w-auto bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 px-6 rounded-lg shadow-md transition duration-150 ease-in-out focus:outline-none focus:ring-2 focus:ring-amber-400"
-            aria-label="Reiniciar Cuestionario"
+            aria-label="Volver al Inicio / Reiniciar Cuestionario"
           >
-            <i className="fas fa-redo-alt mr-2"></i> Reiniciar Cuestionario
+            <i className="fas fa-home mr-2"></i> Volver al Inicio
           </button>
         </div>
       </div>

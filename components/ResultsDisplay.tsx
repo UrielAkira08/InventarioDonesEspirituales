@@ -4,8 +4,8 @@ import { UserResult, GiftScore } from '../types';
 
 interface ResultsDisplayProps {
   result: UserResult;
-  onReset: () => void;
-  onNavigateToDevelopmentGuide: () => void; // New prop
+  onReset: () => void; // This function should navigate to the Welcome/Home screen
+  onNavigateToDevelopmentGuide: () => void; 
 }
 
 const GiftCard: React.FC<{ giftScore: GiftScore, rank: number }> = ({ giftScore, rank }) => {
@@ -74,19 +74,25 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ result, onReset, onNavi
         </div>
       )}
 
-      <div className="mt-12 text-center space-y-4 sm:space-y-0 sm:space-x-4">
+      <div className="mt-12 text-center space-y-4 sm:space-y-0 sm:flex sm:flex-wrap sm:justify-center sm:gap-4">
         <button
-          onClick={onReset}
-          className="bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 px-6 sm:px-10 rounded-lg shadow-lg transition duration-150 ease-in-out text-lg sm:text-xl focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-opacity-50"
+          onClick={onReset} // Re-labeled "Realizar de Nuevo" to be more generic "Volver al Inicio"
+          className="w-full sm:w-auto bg-slate-500 hover:bg-slate-600 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition duration-150 ease-in-out text-lg focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-opacity-50"
         >
-          <i className="fas fa-redo-alt mr-2"></i> Realizar de Nuevo
+          <i className="fas fa-home mr-2"></i> Volver al Inicio
+        </button>
+        <button //This button's action can be interpreted as "Start Over" or "Take Quiz Again"
+          onClick={onReset} 
+          className="w-full sm:w-auto bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition duration-150 ease-in-out text-lg focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-opacity-50"
+        >
+          <i className="fas fa-redo-alt mr-2"></i> Realizar Cuestionario de Nuevo
         </button>
         <button
           onClick={onNavigateToDevelopmentGuide}
-          className="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 sm:px-10 rounded-lg shadow-lg transition duration-150 ease-in-out text-lg sm:text-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50"
+          className="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition duration-150 ease-in-out text-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50"
           aria-label="Crear o ver plan de desarrollo ministerial"
         >
-          <i className="fas fa-seedling mr-2"></i> Crear/Ver Plan de Desarrollo Ministerial 
+          <i className="fas fa-seedling mr-2"></i> Crear/Ver Plan de Desarrollo
         </button>
       </div>
        <p className="text-center text-xs text-gray-500 mt-4">
