@@ -111,7 +111,7 @@ const SpiritualGiftsDevelopmentGuide: React.FC<SpiritualGiftsDevelopmentGuidePro
 
   return (
     <div className="space-y-8 py-8">
-      <div className="text-center mb-8">
+      <div className="text-center mb-4"> {/* Adjusted mb for new button */}
         <h2 className="text-2xl sm:text-3xl font-extrabold text-sky-800 mb-2">
           Plan de Desarrollo Ministerial
         </h2>
@@ -122,6 +122,18 @@ const SpiritualGiftsDevelopmentGuide: React.FC<SpiritualGiftsDevelopmentGuidePro
           Tus dones principales identificados: <span className="font-medium text-teal-600">{topGiftsText}</span>
         </p>
       </div>
+      
+      <div className="text-center mb-8"> {/* Container for the new button */}
+        <button
+          onClick={onNavigateToResults}
+          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-sky-600 hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500"
+          aria-label="Ver resultados detallados del cuestionario"
+        >
+          <i className="fas fa-poll-h mr-2"></i>
+          Ver Resultados Detallados
+        </button>
+      </div>
+
 
       {saveError && (
         <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-md text-sm text-center">
