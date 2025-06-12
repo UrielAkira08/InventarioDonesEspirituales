@@ -27,6 +27,7 @@ export interface GiftScore {
 export interface UserResult {
   id?: string; // Optional: ID from Firestore
   name: string;
+  userEmail?: string; // Added userEmail
   topGifts: GiftScore[];
   allScores: GiftScore[];
   createdAt: Date | any; // Date for local, Firebase ServerTimestamp for Firestore
@@ -35,11 +36,13 @@ export interface UserResult {
 
 export enum AppStep {
   Welcome,
+  IdentifyForQuiz, // New step to gather name and email before quiz
+  IdentifyForDevelopment, // New step to gather email to load development plan
   Form,
   Calculating,
-  Saving, // New step for saving to Firestore
+  Saving,
   Results,
-  DevelopmentGuide, // New step for the development guide
+  DevelopmentGuide,
 }
 
 export interface DevelopmentPlanData {
