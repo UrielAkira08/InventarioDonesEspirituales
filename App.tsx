@@ -279,17 +279,15 @@ const App: React.FC = () => {
   const loadOrCreateDevelopmentPlan = useCallback(async () => {
     if (!userEmail) {
       setPlanLoadingError("Correo electrónico del usuario no disponible. No se puede cargar el plan.");
-      setDevelopmentPlan(initialDevelopmentPlanData);
-      setCurrentStep(AppStep.IdentifyForDevelopment); 
+      setDevelopmentPlan(initialDevelopmentPlanData); // Provide a fallback structure
+      // setCurrentStep(AppStep.IdentifyForDevelopment); // Avoid navigation if already trying to load
       console.error("loadOrCreateDevelopmentPlan: userEmail is missing.");
       return;
     }
     if (!results || !results.name) { 
       setPlanLoadingError("Resultados del cuestionario no disponibles. No se puede cargar/crear el plan.");
-      setDevelopmentPlan(initialDevelopmentPlanData);
+      setDevelopmentPlan(initialDevelopmentPlanData); // Provide a fallback structure
       console.error("loadOrCreateDevelopmentPlan: results or results.name is missing.", results);
-      // It might be better to navigate to a state where results can be acquired if this happens.
-      // For now, it shows an error if called inappropriately.
       return;
     }
 
@@ -345,16 +343,12 @@ const App: React.FC = () => {
         return;
     }
     setCurrentStep(AppStep.DevelopmentGuide);
-    loadOrCreateDevelopmentPlan();
+    // Directly call loadOrCreateDevelopmentPlan. The useEffect for this purpose is removed.
+    loadOrCreateDevelopmentPlan(); 
   }, [userEmail, results, loadOrCreateDevelopmentPlan]);
   
-   useEffect(() => {
-    if (currentStep === AppStep.DevelopmentGuide && userEmail && results && !developmentPlan && !isPlanLoading) {
-        console.log("useEffect triggered: Navigating to DevelopmentGuide, attempting to loadOrCreateDevelopmentPlan.");
-        loadOrCreateDevelopmentPlan();
-    }
-  }, [currentStep, userEmail, results, developmentPlan, isPlanLoading, loadOrCreateDevelopmentPlan]);
-
+  // Removed useEffect that previously called loadOrCreateDevelopmentPlan
+  // as handleNavigateToDevelopmentGuide now reliably calls it.
 
   const handleDevelopmentPlanChange = useCallback((fieldName: keyof DevelopmentPlanData, value: any) => {
     setDevelopmentPlan(prev => {
